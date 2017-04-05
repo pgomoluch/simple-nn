@@ -1,11 +1,13 @@
 #include "network.h"
 #include "utils.h"
 
+#include <chrono>
 #include <cmath>
 #include <cstdlib>
 #include <iostream>
 
 using namespace std;
+using namespace std::chrono;
 
 void test1();
 void test2();
@@ -17,46 +19,8 @@ int main()
     srand(time(NULL));
     cout << "NN\n";
     
-    /*vector<Neuron> input_layer;
-    Neuron in1, in2;
-    in1.output = 1.0;
-    in2.output = 2.0;
-    input_layer.push_back(in1);
-    input_layer.push_back(in2);
-    
-    vector<Link> links = { Link(0), Link(1) };
-    Neuron out1(links), out2(links);
-    vector<Neuron> output_layer = { out1, out2 };
-    
-    for(Neuron &n: output_layer)
-    {
-        double sum = n.bias;
-        for(Link l: n.inputs)
-        {
-            sum += l.weight * input_layer[l.id].output;
-        }
-        n.output = logistic(sum);
-        cout << "sum = " << sum << endl;
-    }
-    
-    for(Neuron &n: output_layer)
-    {
-        cout << n.output << " ";
-    }
-    cout << endl;
-    
-    //for(double d = -5.0; d < 5.0; d += 0.2)
-    //    cout << d << " " << logistic(d) << endl;
-    
-    cout << "Now using the Network class...\n";
-    Network network({2, 3, 2, 3, 2});
-    cout << network.evaluate({1.0, 2.0}) << endl;
-    network.backpropagate(0.1, {1.0, 2.0});
-    network.update_weights(0.01);*/
-    
-    //test1();
-    //test2();
     test3();
+    
     return 0;
 }
 
@@ -155,9 +119,17 @@ void test3()
     }
     network.save("nn555.txt");
     
-    //Network network2({5, 5, 5});
-    //network2.load("nn555.txt");
-    //cout << "New MSE: " << mse(network2, features_train, labels_train) << endl;
+    Network network2({5, 5, 5});
+    network2.load("nn555.txt");
+    
+    double mse_result;
+    high_resolution_clock::time_point t1 = high_resolution_clock::now();
+    mse_result =  mse(network2, features_train, labels_train);
+    high_resolution_clock::time_point t2 = high_resolution_clock::now();
+    
+    auto duration = (duration_cast<microseconds>(t2 - t1)).count();
+    cout << "MSE on loaded network: " << mse(network2, features_train, labels_train)
+        << ". Computed in " << duration << " microseconds." << endl;
 }
 
 void test4()

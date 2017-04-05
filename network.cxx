@@ -93,21 +93,19 @@ double Network::evaluate(const vector<double> &inputs)
 }
 
 void Network::backpropagate(double error, vector<double> inputs) // isn't error unused? :D it's kind of ok, if we push the sign separately
-{   
-    //cout << "Backprop called..." << endl;
+{
     unsigned last_hidden = hidden_layers.size()-1;
     if (last_hidden == -1)
         for (Link &l: output_neuron.inputs)
             l.derivative = inputs[l.id];
     else
-        for(Link &l: output_neuron.inputs)
+        for (Link &l: output_neuron.inputs)
             l.derivative = hidden_layers[last_hidden][l.id].output;
     
     output_neuron.d_bias = 1.0;
     // Assume full connection
     for(int i = last_hidden; i >= 0; --i)
     {
-        //cout << "Backprop through a layer..." << endl;
         vector<double> *input_vector;
         if(i == 0)
         {
@@ -124,14 +122,12 @@ void Network::backpropagate(double error, vector<double> inputs) // isn't error 
         {
             if(i == last_hidden) // unfold
             {
-                hidden_layers[i][j].d_output = output_neuron.inputs[j].weight;
-                double d_previous = output_neuron.inputs[j].weight * //TODO use the above
+                hidden_layers[i][j].d_sum = output_neuron.inputs[j].weight *
                     d_activation(hidden_layers[i][j].output);
+                double d_previous = hidden_layers[i][j].d_sum;
                 for(unsigned k=0; k < hidden_layers[i][j].inputs.size(); ++k)
                 {
-                    hidden_layers[i][j].inputs[k].derivative =
-                        d_previous *
-                        (*input_vector)[k];
+                    hidden_layers[i][j].inputs[k].derivative = d_previous * (*input_vector)[k];
                     //cout << "dw(" << i << "," << j << "," << k << ") = " << hidden_layers[i][j].inputs[k].derivative << endl;
                 }
                 hidden_layers[i][j].d_bias = d_previous;
@@ -141,14 +137,11 @@ void Network::backpropagate(double error, vector<double> inputs) // isn't error 
                 double d_previous = 0.0;
                 for(unsigned k=0; k < hidden_layers[i+1].size(); ++k)
                 {
-                    d_previous +=
-                        //hidden_layers[i+1][k].inputs[j].derivative; // but this is dy/dw, not dy/dx
-                        hidden_layers[i+1][k].d_output *
-                        d_activation(hidden_layers[i+1][k].output) * // new; TODO the d_activation is recomputed, store it somewhere (or replace d_output with d_sum)
+                    d_previous += hidden_layers[i+1][k].d_sum *
                         hidden_layers[i+1][k].inputs[j].weight;
                 }
-                hidden_layers[i][j].d_output = d_previous;
-                d_previous *= d_activation(hidden_layers[i][j].output); // 
+                d_previous *= d_activation(hidden_layers[i][j].output);
+                hidden_layers[i][j].d_sum = d_previous;
                 for(unsigned k=0; k < hidden_layers[i][j].inputs.size(); ++k)
                 {
                     hidden_layers[i][j].inputs[k].derivative = d_previous * (*input_vector)[k];

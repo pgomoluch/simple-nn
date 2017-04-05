@@ -23,7 +23,7 @@ public:
 class Neuron
 {
 public:
-    double output, d_output;
+    double output, d_sum;
     std::vector<Link> inputs;
     double bias, d_bias;
 public:
