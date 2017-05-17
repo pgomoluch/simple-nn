@@ -52,10 +52,10 @@ Network::Network(const vector<unsigned> &shape)
         }
         hidden_layers.push_back(layer); //TODO copy
     }
-    int last_hidden_size = shape[shape.size()-1];
+    unsigned last_hidden_size = shape[shape.size()-1];
     vector<Link> full_conn;
     full_conn.reserve(last_hidden_size);
-    for(unsigned j = 0; j < last_hidden_size; ++j)
+    for (unsigned j = 0; j < last_hidden_size; ++j)
     	full_conn.push_back(Link(j));
    	output_neuron = Neuron(full_conn); //TODO the previous Neuron object is wasted
 }
@@ -67,7 +67,7 @@ double Network::evaluate(const vector<double> &inputs)
         for (Neuron &n: hidden_layers[i])
         {
             double sum = n.bias;
-            if(i == 0) //TODO unfold the loop for this case for more SPEED
+            if (i == 0) //TODO unfold the loop for this case
             {
                 for (Link &l: n.inputs)
                     sum += l.weight * inputs[l.id];
@@ -81,7 +81,7 @@ double Network::evaluate(const vector<double> &inputs)
         }
     }
     
-    unsigned last_hidden = hidden_layers.size()-1;
+    int last_hidden = hidden_layers.size()-1;
     double sum = output_neuron.bias;
     if (last_hidden == -1)
         for (Link &l: output_neuron.inputs)
@@ -92,9 +92,9 @@ double Network::evaluate(const vector<double> &inputs)
 	return sum;
 }
 
-void Network::backpropagate(double error, vector<double> inputs) // isn't error unused? :D it's kind of ok, if we push the sign separately
+void Network::backpropagate(vector<double> inputs)
 {
-    unsigned last_hidden = hidden_layers.size()-1;
+    int last_hidden = hidden_layers.size()-1;
     if (last_hidden == -1)
         for (Link &l: output_neuron.inputs)
             l.derivative = inputs[l.id];
@@ -103,11 +103,11 @@ void Network::backpropagate(double error, vector<double> inputs) // isn't error 
             l.derivative = hidden_layers[last_hidden][l.id].output;
     
     output_neuron.d_bias = 1.0;
-    // Assume full connection
-    for(int i = last_hidden; i >= 0; --i)
+    
+    for (int i = last_hidden; i >= 0; --i)
     {
         vector<double> *input_vector;
-        if(i == 0)
+        if (i == 0)
         {
             input_vector = &inputs;
         }
@@ -118,35 +118,29 @@ void Network::backpropagate(double error, vector<double> inputs) // isn't error 
                 (*input_vector)[j] = hidden_layers[i-1][j].output;
         }
         
-        for(unsigned j = 0; j < hidden_layers[i].size(); ++j)
+        for (unsigned j = 0; j < hidden_layers[i].size(); ++j)
         {
-            if(i == last_hidden) // unfold
+            if(i == last_hidden) //TODO unfold
             {
                 hidden_layers[i][j].d_sum = output_neuron.inputs[j].weight *
                     d_activation(hidden_layers[i][j].output);
                 double d_previous = hidden_layers[i][j].d_sum;
-                for(unsigned k=0; k < hidden_layers[i][j].inputs.size(); ++k)
-                {
+                for (unsigned k=0; k < hidden_layers[i][j].inputs.size(); ++k)
                     hidden_layers[i][j].inputs[k].derivative = d_previous * (*input_vector)[k];
-                    //cout << "dw(" << i << "," << j << "," << k << ") = " << hidden_layers[i][j].inputs[k].derivative << endl;
-                }
                 hidden_layers[i][j].d_bias = d_previous;
             }
             else
             {
                 double d_previous = 0.0;
-                for(unsigned k=0; k < hidden_layers[i+1].size(); ++k)
+                for (unsigned k=0; k < hidden_layers[i+1].size(); ++k)
                 {
                     d_previous += hidden_layers[i+1][k].d_sum *
                         hidden_layers[i+1][k].inputs[j].weight;
                 }
                 d_previous *= d_activation(hidden_layers[i][j].output);
                 hidden_layers[i][j].d_sum = d_previous;
-                for(unsigned k=0; k < hidden_layers[i][j].inputs.size(); ++k)
-                {
+                for (unsigned k=0; k < hidden_layers[i][j].inputs.size(); ++k)
                     hidden_layers[i][j].inputs[k].derivative = d_previous * (*input_vector)[k];
-                    //cout << "dw(" << i << "," << j << "," << k << ") = " << hidden_layers[i][j].inputs[k].derivative << endl;
-                }
                 hidden_layers[i][j].d_bias = d_previous;             
             }
         }
@@ -165,10 +159,7 @@ void Network::update_weights(double rate, int sign)
         for (Neuron &neuron: layer)
         {
             for (Link &l: neuron.inputs)
-            {
                 l.weight -= sign * rate * l.derivative;
-                //cout << l.weight << "  ";
-            }
             neuron.bias -= sign * rate * neuron.d_bias;
         }
 }
@@ -180,7 +171,7 @@ void Network::train(const std::vector<std::vector<double> > &features,
     {
         int s = rand() % labels.size();
         double err = evaluate(features[s]) - labels[s];
-        backpropagate(err, features[s]);
+        backpropagate(features[s]);
         int sign = err > 0 ? 1 : -1;
         update_weights(learning_rate, sign);
     }
@@ -227,3 +218,4 @@ bool Network::load(const char *path)
     file.close();
     return true;
 }
+

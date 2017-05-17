@@ -36,7 +36,7 @@ bool read_data(const char *feature_path, const char *label_path, std::vector<std
     
     if(features.size() != labels.size())
     {
-        cout << "Sizes if feature matrix and label vector don't match.";
+        cout << "Sizes of feature matrix and label vector don't match." << endl;
         return false;
     }
     

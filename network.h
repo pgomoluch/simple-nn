@@ -16,7 +16,7 @@ public:
     bool save(const char *path);
     bool load(const char *path);
     
-    void backpropagate(double error, std::vector<double> inputs); // requiring the input again is inconsistent
+    void backpropagate(std::vector<double> inputs); // requiring the input again is inconsistent
     void update_weights(double rate, int sign);
 private:
     Neuron output_neuron;
