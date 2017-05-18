@@ -177,6 +177,27 @@ void Network::train(const std::vector<std::vector<double> > &features,
     }
 }
 
+double Network::mae(const vector<vector<double> > &features, const vector<double> &labels)
+{
+    double sum = 0.0;
+    for (unsigned i = 0; i < labels.size(); ++i)
+    {    
+        sum += std::abs(evaluate(features[i]) - labels[i]);
+    }
+    return sum / labels.size();
+}
+
+double Network::mse(const vector<vector<double> > &features, const vector<double> &labels)
+{
+    double sum = 0.0;
+    for (unsigned i = 0; i < labels.size(); ++i)
+    {
+        double err = evaluate(features[i]) - labels[i];
+        sum += err * err;
+    }
+    return sum / labels.size();
+}
+
 bool Network::save(const char *path)
 {
     ofstream file(path);
