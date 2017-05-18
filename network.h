@@ -19,8 +19,8 @@ public:
     bool save(const char *path);
     bool load(const char *path);
     
-    void backpropagate(std::vector<double> inputs); // requiring the input again is inconsistent
-    void update_weights(double rate, int sign);
+    void backpropagate(double y, double ey, std::vector<double> inputs); // requiring the input again is inconsistent
+    void update_weights(double rate);
 private:
     Neuron output_neuron;
     std::vector<std::vector<Neuron> > hidden_layers;

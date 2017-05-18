@@ -14,7 +14,7 @@ using namespace std::chrono;
 const char *features_train_file = "features_train.txt";
 const char *features_test_file = "features_test.txt";
 const char *labels_train_file = "labels_train.txt";
-const char *labels_test_file = "labels_test";
+const char *labels_test_file = "labels_test.txt";
 
 void test1();
 void test5_learn_split();
@@ -105,7 +105,7 @@ void test6_learn_all()
     cout << "Initial MAE: " << initial_mae << endl;
     for (int i = 0; i < 10000; ++i)
     {
-        network.train(features, labels, 100000, 0.0000001);
+        network.train(features, labels, 100000, 0.000000001);
         double _mae = network.mae(features, labels);
         double _mse = network.mse(features, labels);
         cout << "Ep: " << i << " MAE: " << _mae << " MSE: "
