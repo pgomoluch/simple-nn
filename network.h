@@ -12,7 +12,7 @@ public:
     Network(const std::vector<unsigned> &shape);
     double evaluate(const std::vector<double> &inputs);
     void train(const std::vector<std::vector<double> > &features,
-        std::vector<double> &labels, unsigned iter, double learning_rate);
+        const std::vector<double> &labels, unsigned iter, double learning_rate);
     double mae(const std::vector<std::vector<double> > &features, const std::vector<double> &labels);
     double mse(const std::vector<std::vector<double> > &features, const std::vector<double> &labels);
     

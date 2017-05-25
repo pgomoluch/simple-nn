@@ -168,7 +168,7 @@ void Network::update_weights(double rate)
 }
 
 void Network::train(const std::vector<std::vector<double> > &features,
-        std::vector<double> &labels, unsigned iter, double learning_rate)
+        const std::vector<double> &labels, unsigned iter, double learning_rate)
 {
     for (unsigned i = 0; i < iter; ++i)
     {
