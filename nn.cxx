@@ -32,8 +32,8 @@ int main(int argc, const char *argv[])
     
     if (argc == 1)
     {
-        //test6_learn_all();
-        test5_learn_split();
+        test6_learn_all();
+        //test5_learn_split();
     }
     else if (argc >= 5)
     {
@@ -68,7 +68,7 @@ void learn(const vector<vector<double> > &features, const vector<double> &labels
     cout << "Initial MAE: " << initial_mae << endl;
     for (int i = 0; i < iters; ++i)
     {
-        network.train(features, labels, 100000, 0.000000001);
+        network.train(features, labels, 100000, 0.0000000001);
         double _mae = network.mae(features, labels);
         double _mse = network.mse(features, labels);
         cout << "Ep: " << i << " MAE: " << _mae << " MSE: "
@@ -78,8 +78,7 @@ void learn(const vector<vector<double> > &features, const vector<double> &labels
     learning_log.close();
     network.save(network_file);
     
-    Network network2(architecture);
-    network2.load(network_file);
+    Network network2(network_file);
     
     double mse_result;
     high_resolution_clock::time_point t1 = high_resolution_clock::now();
@@ -120,8 +119,7 @@ void test5_learn_split()
     
     learn(features_train, labels_train, 100, {5,5,3});
     
-    Network network3({5,5,3});
-    network3.load(network_file);
+    Network network3(network_file);
     cout << "MSE (test set): " << network3.mse(features_test, labels_test) << ".\n";
     cout << "MAE (test set): " << network3.mae(features_test, labels_test) << ".\n";
 }
@@ -135,6 +133,5 @@ void test6_learn_all()
     read_data(features_train_file, labels_train_file, features, labels);
     read_data(features_test_file, labels_test_file, features, labels);
     
-    Network network({5,5,3});
-    learn(features, labels, 10000, {5,5,3});
+    learn(features, labels, 10000, {7,7,3});
 }

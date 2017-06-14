@@ -1,8 +1,8 @@
 #include "network.h"
 
 #include <cmath>
-#include <fstream>
 #include <iostream>
+#include <sstream>
 
 using namespace std;
 
@@ -32,32 +32,23 @@ double d_rectify(const double x)
 
 Network::Network(const vector<unsigned> &shape)
 {
-    //activation = logistic;
-    //d_activation = d_logistic;
-    activation = rectify;
-    d_activation = d_rectify;
+    init(shape);
+}
+
+Network::Network(const char *path)
+{
+    ifstream file(path);
     
-    input_size = shape[0];
-    for (unsigned i = 1; i < shape.size(); ++i)
-    {
-        vector<Neuron> layer;
-        layer.reserve(shape[i]);
-        for (unsigned j = 0; j < shape[i]; ++j)
-        {
-            vector<Link> full_conn;
-            full_conn.reserve(shape[i-1]);
-            for (unsigned k = 0; k < shape[i-1]; ++k)
-                full_conn.push_back(Link(k));
-            layer.push_back(Neuron(full_conn));
-        }
-        hidden_layers.push_back(layer); //TODO copy
-    }
-    unsigned last_hidden_size = shape[shape.size()-1];
-    vector<Link> full_conn;
-    full_conn.reserve(last_hidden_size);
-    for (unsigned j = 0; j < last_hidden_size; ++j)
-    	full_conn.push_back(Link(j));
-   	output_neuron = Neuron(full_conn); //TODO the previous Neuron object is wasted
+    vector<unsigned> shape;
+    string first_line;
+    getline(file, first_line);
+    stringstream first_line_stream(first_line);
+    unsigned u;
+    while(first_line_stream >> u)
+        shape.push_back(u);
+    
+    init(shape);
+    load_weights(file);
 }
 
 double Network::evaluate(const vector<double> &inputs)
@@ -204,6 +195,18 @@ bool Network::save(const char *path)
 {
     ofstream file(path);
     
+    // The size of the input vector
+    if(hidden_layers.size() > 0)
+        file << hidden_layers[0][0].inputs.size() << " ";
+    else
+        file << output_neuron.inputs.size() << " ";
+    
+    // The sizes of hidden layers    
+    for (auto &layer: hidden_layers)
+        file << layer.size() << " ";
+    file << endl;
+    
+    // Weights
     for (Link &link: output_neuron.inputs)
         file << link.weight << " ";
     file << output_neuron.bias << endl;
@@ -221,10 +224,39 @@ bool Network::save(const char *path)
     return true;
 }
 
-bool Network::load(const char *path)
+void Network::init(const vector<unsigned> &shape)
 {
-    ifstream file(path);
+    //activation = logistic;
+    //d_activation = d_logistic;
+    activation = rectify;
+    d_activation = d_rectify;
     
+    input_size = shape[0];
+    for (unsigned i = 1; i < shape.size(); ++i)
+    {
+        vector<Neuron> layer;
+        layer.reserve(shape[i]);
+        for (unsigned j = 0; j < shape[i]; ++j)
+        {
+            vector<Link> full_conn;
+            full_conn.reserve(shape[i-1]);
+            for (unsigned k = 0; k < shape[i-1]; ++k)
+                full_conn.push_back(Link(k));
+            layer.push_back(Neuron(full_conn));
+        }
+        hidden_layers.push_back(layer); //TODO copy
+    }
+    unsigned last_hidden_size = shape[shape.size()-1];
+    vector<Link> full_conn;
+    
+    full_conn.reserve(last_hidden_size);
+    for (unsigned j = 0; j < last_hidden_size; ++j)
+    	full_conn.push_back(Link(j));
+   	output_neuron = Neuron(full_conn); //TODO the previous Neuron object is wasted    
+}
+
+bool Network::load_weights(ifstream &file)
+{   
     for (Link &link: output_neuron.inputs)
         file >> link.weight;
     file >> output_neuron.bias;
