@@ -1,3 +1,4 @@
+#include "config.h"
 #include "network.h"
 #include "utils.h"
 
@@ -23,20 +24,31 @@ void test1();
 void test5_learn_split();
 void test6_learn_all();
 void learn(const vector<vector<double> > &features, const vector<double> &labels,
-    const unsigned iters, const vector<unsigned> &architecture);
+    const unsigned iters, vector<unsigned> architecture);
 
 
 int main(int argc, const char *argv[])
 {
     srand(time(NULL));
-    
+     
     if (argc == 1)
     {
         test6_learn_all();
         //test5_learn_split();
     }
-    else if (argc >= 5)
+    else if (argc == 2)
     {
+        Config config;
+        config.load(argv[1]);
+        
+        vector<vector<double> > features;
+        vector<double> labels;
+        read_data(config.features_train.c_str(), config.labels_train.c_str(), features, labels);
+        learn(features, labels, config.iterations, config.hidden_layers);
+    }
+    else if (argc >= 5) // old command line interface, deprecated, use a configuration file instead
+    {
+        // nn <features file> <labels file> <iterations> [<first hidden layer size> [<second ...> ...]]
         const char *features_path = argv[1];
         const char *labels_path = argv[2];
         unsigned iters = atoi(argv[3]);
@@ -51,14 +63,15 @@ int main(int argc, const char *argv[])
     }
     else
     {
-        cout << "Usage: nn <features file> <labels file> <iterations> <number of inputs> [<first hidden layer size> [<second ...> ...]]" << endl;
+        cout << "Usage: nn <configuration file>" << endl;
     }
     return 0;
 }
 
 void learn(const vector<vector<double> > &features, const vector<double> &labels,
-    const unsigned iters, const vector<unsigned> &architecture)
-{    
+    const unsigned iters, vector<unsigned> architecture)
+{   
+    architecture.insert(architecture.begin(), features[0].size()); 
     Network network(architecture);
     
     ofstream learning_log(learning_log_file);
@@ -74,6 +87,12 @@ void learn(const vector<vector<double> > &features, const vector<double> &labels
         cout << "Ep: " << i << " MAE: " << _mae << " MSE: "
             << _mse << endl;
         learning_log << i+1 << " " << _mae << " " << _mse << endl;
+        if(i && (i % 10000 == 0))
+        {
+            char filename[100];
+            sprintf(filename, "%s-b%d", network_file, i);
+            network.save(filename);
+        }
     }
     learning_log.close();
     network.save(network_file);

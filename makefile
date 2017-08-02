@@ -1,4 +1,4 @@
-OBJS = nn.o network.o utils.o
+OBJS = nn.o config.o network.o utils.o
 CC = g++
 FLAGS = -std=c++11
 
