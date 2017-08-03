@@ -12,7 +12,6 @@ using namespace std;
 using namespace std::chrono;
 
 
-const char *network_file = "network.txt";
 const char *learning_log_file = "learning_log.txt";
 
 const char *features_train_file = "features_train.txt";
@@ -23,8 +22,7 @@ const char *labels_test_file = "labels_test.txt";
 void test1();
 void test5_learn_split();
 void test6_learn_all();
-void learn(const vector<vector<double> > &features, const vector<double> &labels,
-    const unsigned iters, vector<unsigned> architecture);
+void learn(const vector<vector<double> > &features, const vector<double> &labels, const Config &config);
 
 
 int main(int argc, const char *argv[])
@@ -44,7 +42,7 @@ int main(int argc, const char *argv[])
         vector<vector<double> > features;
         vector<double> labels;
         read_data(config.features_train.c_str(), config.labels_train.c_str(), features, labels);
-        learn(features, labels, config.iterations, config.hidden_layers);
+        learn(features, labels, config);
     }
     else if (argc >= 5) // old command line interface, deprecated, use a configuration file instead
     {
@@ -59,7 +57,11 @@ int main(int argc, const char *argv[])
         vector<vector<double> > features;
         vector<double> labels;
         read_data(features_path, labels_path, features, labels);
-        learn(features, labels, iters, architecture);    
+        Config config;
+        config.iterations = iters;
+        config.hidden_layers = architecture;
+        config.learning_rate = 0.0000000001;
+        learn(features, labels, config);    
     }
     else
     {
@@ -68,9 +70,9 @@ int main(int argc, const char *argv[])
     return 0;
 }
 
-void learn(const vector<vector<double> > &features, const vector<double> &labels,
-    const unsigned iters, vector<unsigned> architecture)
+void learn(const vector<vector<double> > &features, const vector<double> &labels, const Config &config)
 {   
+    vector<unsigned> architecture = config.hidden_layers;
     architecture.insert(architecture.begin(), features[0].size()); 
     Network network(architecture);
     
@@ -79,9 +81,13 @@ void learn(const vector<vector<double> > &features, const vector<double> &labels
     double initial_mse = network.mse(features, labels);
     learning_log << 0 << " " << initial_mae << " " << initial_mse << endl;
     cout << "Initial MAE: " << initial_mae << endl;
-    for (int i = 0; i < iters; ++i)
+    
+    steady_clock::time_point t1 = steady_clock::now();
+    
+    for (int i = 0; i < config.iterations; ++i)
     {
-        network.train(features, labels, 100000, 0.0000000001);
+        //network.train(features, labels, 100000, 0.0000000001);
+        network.train(features, labels, 100000, config.learning_rate);
         double _mae = network.mae(features, labels);
         double _mse = network.mse(features, labels);
         cout << "Ep: " << i << " MAE: " << _mae << " MSE: "
@@ -90,25 +96,30 @@ void learn(const vector<vector<double> > &features, const vector<double> &labels
         if(i && (i % 10000 == 0))
         {
             char filename[100];
-            sprintf(filename, "%s-b%d", network_file, i);
+            sprintf(filename, "%s-b%d", config.network_file.c_str(), i);
             network.save(filename);
         }
     }
-    learning_log.close();
-    network.save(network_file);
     
-    Network network2(network_file);
+    steady_clock::time_point t2 = steady_clock::now();
+    auto duration = duration_cast<seconds>(t2 - t1).count();
+    cout << "Total training time: " << duration << "s." << endl;
+    
+    learning_log.close();
+    network.save(config.network_file.c_str());
+    
+    Network network2(config.network_file.c_str());
     
     double mse_result;
-    high_resolution_clock::time_point t1 = high_resolution_clock::now();
+    high_resolution_clock::time_point et1 = high_resolution_clock::now();
     mse_result = network2.mse(features, labels);
-    high_resolution_clock::time_point t2 = high_resolution_clock::now();
+    high_resolution_clock::time_point et2 = high_resolution_clock::now();
     
-    auto duration = (duration_cast<microseconds>(t2 - t1)).count();
+    duration = (duration_cast<milliseconds>(et2 - et1)).count();
     cout << "MSE on loaded network: " << mse_result
-        << ". Computed in " << duration << " microseconds." << endl;
+        << ". Computed in " << duration << " ms." << endl;
     cout << "MAE on loaded network: " << network2.mae(features, labels) << endl;
-    cout << labels.size() << endl;
+    cout << "Total samples: " << labels.size() << endl;
 }
 
 void test1()
@@ -136,9 +147,13 @@ void test5_learn_split()
     read_data(features_train_file, labels_train_file, features_train, labels_train);
     read_data(features_test_file, labels_test_file, features_test, labels_test);
     
-    learn(features_train, labels_train, 100, {5,5,3});
+    Config config;
+    config.iterations = 100;
+    config.hidden_layers = vector<unsigned>({5,3});
+    config.learning_rate = 0.00000001;
+    learn(features_train, labels_train, config);
     
-    Network network3(network_file);
+    Network network3(config.network_file.c_str());
     cout << "MSE (test set): " << network3.mse(features_test, labels_test) << ".\n";
     cout << "MAE (test set): " << network3.mae(features_test, labels_test) << ".\n";
 }
@@ -152,5 +167,9 @@ void test6_learn_all()
     read_data(features_train_file, labels_train_file, features, labels);
     read_data(features_test_file, labels_test_file, features, labels);
     
-    learn(features, labels, 10000, {7,7,3});
+    Config config;
+    config.iterations = 10000;
+    config.hidden_layers = vector<unsigned>({7,3});
+    config.learning_rate = 0.00000001;
+    learn(features, labels, config);
 }

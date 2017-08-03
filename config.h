@@ -12,6 +12,7 @@ public:
     double learning_rate = 0.001;
     std::string features_train = "features_train.txt";
     std::string labels_train = "labels_train.txt";
+    std::string network_file = "network.txt";
     
     bool load(const char *path);
 

@@ -12,6 +12,7 @@ const string learning_rate_key = "learning_rate";
 const string features_train_key = "features_train";
 const string labels_train_key = "labels_train";
 const string hidden_layers_key = "hidden_layers";
+const string network_file_key = "network_file";
 
 bool Config::load(const char *path)
 {
@@ -64,6 +65,10 @@ bool Config::parse_key_value(const string &line)
     else if (key == labels_train_key)
     {
         stream >> labels_train;
+    }
+    else if (key == network_file_key)
+    {
+        stream >> network_file;
     }
     else if (key == hidden_layers_key)
     {
