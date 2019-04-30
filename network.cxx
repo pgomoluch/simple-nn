@@ -68,6 +68,7 @@ double Network::evaluate(const vector<double> &inputs)
                 for (Link &l: n.inputs)
                     sum += l.weight * hidden_layers[i-1][l.id].output;
             }
+            n.pre_activation_output = sum;
             n.output = activation(sum);
         }
     }
@@ -94,7 +95,7 @@ void Network::backpropagate(double y, double ey, vector<double> inputs)
     else
         for (Link &l: output_neuron.inputs)
             l.derivative = error_factor * hidden_layers[last_hidden][l.id].output;
-    
+
     output_neuron.d_sum = error_factor;
     output_neuron.d_bias = error_factor * 1.0;
     
@@ -117,7 +118,7 @@ void Network::backpropagate(double y, double ey, vector<double> inputs)
             if(i == last_hidden) //TODO unfold
             {
                 hidden_layers[i][j].d_sum = output_neuron.d_sum * output_neuron.inputs[j].weight *
-                    d_activation(hidden_layers[i][j].output);
+                    d_activation(hidden_layers[i][j].pre_activation_output);
                 double d_previous = hidden_layers[i][j].d_sum;
                 for (unsigned k=0; k < hidden_layers[i][j].inputs.size(); ++k)
                     hidden_layers[i][j].inputs[k].derivative = d_previous * (*input_vector)[k];
@@ -131,7 +132,7 @@ void Network::backpropagate(double y, double ey, vector<double> inputs)
                     d_previous += hidden_layers[i+1][k].d_sum *
                         hidden_layers[i+1][k].inputs[j].weight;
                 }
-                d_previous *= d_activation(hidden_layers[i][j].output);
+                d_previous *= d_activation(hidden_layers[i][j].pre_activation_output);
                 hidden_layers[i][j].d_sum = d_previous;
                 for (unsigned k=0; k < hidden_layers[i][j].inputs.size(); ++k)
                     hidden_layers[i][j].inputs[k].derivative = d_previous * (*input_vector)[k];
