@@ -1,38 +1,43 @@
 #include "network.h"
 
 #include <cmath>
+#include <cstring>
 #include <iostream>
 #include <sstream>
 
 using namespace std;
 
-double logistic(const double x)
+Network::Network(const std::vector<unsigned> &shape)
 {
-    return 1.0 / ( 1.0 + exp(-x) );
-}
+    double *init_weights;
+    double *init_biases;
+    
+    // hidden layers
+    if (shape.size() > 1)
+        for (auto it = shape.begin(); it+1 != shape.end(); ++it)
+        {
+            unsigned n_weights = (*it) * (*(it+1));
+            init_weights = new double[n_weights];
+            randomize(init_weights, n_weights, -0.5, 0.5);
+            init_biases = new double[*(it+1)];
+            randomize(init_biases, *(it+1), -0.5, 0.5);
+            hidden_layers.push_back(make_shared<Layer>(*it, *(it+1), init_weights, init_biases,
+                Layer::relu, Layer::d_relu));
+            delete[] init_weights;
+            delete[] init_biases;
+        }
 
-double d_logistic(const double x)
-{
-    return logistic(x) * (1 - logistic(x));
-}
+    // output layer
+    init_weights = new double[*shape.rbegin()];
+    randomize(init_weights, *shape.rbegin(), -0.5, 0.5);
+    init_biases = new double;
+    randomize(init_biases, 1, -0.5, 0.5);
+    output_layer = make_shared<Layer>(*shape.rbegin(), 1, init_weights, init_biases,
+        nullptr, nullptr);
+    delete[] init_weights;
+    delete init_biases;
 
-double rectify(const double x)
-{
-    if(x < 0)
-        return 0.0;
-    return x; 
-}
-
-double d_rectify(const double x)
-{
-    if(x < 0)
-        return 0.0;
-    return 1.0;
-}
-
-Network::Network(const vector<unsigned> &shape)
-{
-    init(shape);
+    d_input = make_shared<Matrix>(*shape.begin(), 1);
 }
 
 Network::Network(const char *path)
@@ -40,123 +45,101 @@ Network::Network(const char *path)
     ifstream file(path);
     
     vector<unsigned> shape;
-    string first_line;
-    getline(file, first_line);
-    stringstream first_line_stream(first_line);
+    string line;
+    getline(file, line);
+    stringstream line_stream(line);
     unsigned u;
-    while(first_line_stream >> u)
+    while(line_stream >> u)
         shape.push_back(u);
     
-    init(shape);
-    load_weights(file);
+    getline(file, line);
+    stringstream output_weights_stream(line);
+    vector<double> weights;
+    double d;
+    for (unsigned i = 0; i < *shape.rbegin(); ++i)
+    {
+        output_weights_stream >> d;
+        weights.push_back(d);
+    }
+    double output_bias;
+    output_weights_stream >> output_bias;
+
+    Matrix output_matrix(1, *shape.rbegin(), &weights[0]);
+    output_layer = make_shared<Layer>(*shape.rbegin(), 1, &weights[0], &output_bias);
+
+    for (auto it = shape.begin(); it != shape.end(); it++)
+    {
+        auto nit = next(it);
+        if (nit == shape.end())
+            break;
+        double *tmp_weights = new double[*it * *nit];
+        double *tmp_biases = new double[*nit];
+
+        unsigned rows = *nit;
+        unsigned columns = *it;
+        for (unsigned i = 0; i < rows; ++i)
+        {
+            for (unsigned j = 0; j < columns; ++j)
+                file >> tmp_weights[i*columns + j];
+            file >> tmp_biases[i];
+        }
+
+        hidden_layers.push_back(make_shared<Layer>(columns, rows, tmp_weights, tmp_biases,
+            Layer::relu, Layer::d_relu));
+
+        delete[] tmp_weights;
+        delete[] tmp_biases;
+    }
+
+    file.close();
+    d_input = make_shared<Matrix>(*shape.begin(), 1);
 }
 
 double Network::evaluate(const vector<double> &inputs)
 {
-    for (unsigned i = 0; i < hidden_layers.size(); ++i)
-    {
-        for (Neuron &n: hidden_layers[i])
-        {
-            double sum = n.bias;
-            if (i == 0) //TODO unfold the loop for this case
-            {
-                for (Link &l: n.inputs)
-                    sum += l.weight * inputs[l.id];
-            }
-            else
-            {
-                for (Link &l: n.inputs)
-                    sum += l.weight * hidden_layers[i-1][l.id].output;
-            }
-            n.pre_activation_output = sum;
-            n.output = activation(sum);
-        }
-    }
-    
-    int last_hidden = hidden_layers.size()-1;
-    double sum = output_neuron.bias;
-    if (last_hidden == -1)
-        for (Link &l: output_neuron.inputs)
-            sum += l.weight * inputs[l.id];
-    else
-        for (Link &l: output_neuron.inputs)
-    	    sum += l.weight * hidden_layers[last_hidden][l.id].output;
-	return sum;
-}
+    static double buf[10];
+    static Matrix result(1, 1, buf);
 
-void Network::backpropagate(double y, double ey, vector<double> inputs)
-{
-    //double error_factor = (y - ey > 0.0 ? -1.0 : 1.0); // loss is absolute error
-    double error_factor = ey - y; // loss is 1/2 of squared error 
-    int last_hidden = hidden_layers.size()-1;
-    if (last_hidden == -1)
-        for (Link &l: output_neuron.inputs)
-            l.derivative = error_factor * inputs[l.id];
-    else
-        for (Link &l: output_neuron.inputs)
-            l.derivative = error_factor * hidden_layers[last_hidden][l.id].output;
-
-    output_neuron.d_sum = error_factor;
-    output_neuron.d_bias = error_factor * 1.0;
-    
-    for (int i = last_hidden; i >= 0; --i)
+    if (!hidden_layers.empty())
     {
-        vector<double> *input_vector;
-        if (i == 0)
+        (*hidden_layers.begin())->set_input(&inputs[0]);
+        for (auto it = hidden_layers.begin(); it+1 != hidden_layers.end(); it++)
         {
-            input_vector = &inputs;
-        }
-        else
-        {
-            input_vector = new vector<double>(hidden_layers[i-1].size());
-            for (unsigned j=0; j<hidden_layers[i-1].size(); ++j)
-                (*input_vector)[j] = hidden_layers[i-1][j].output;
+            (*it)->forward(**(it+1));
         }
         
-        for (unsigned j = 0; j < hidden_layers[i].size(); ++j)
-        {
-            if(i == last_hidden) //TODO unfold
-            {
-                hidden_layers[i][j].d_sum = output_neuron.d_sum * output_neuron.inputs[j].weight *
-                    d_activation(hidden_layers[i][j].pre_activation_output);
-                double d_previous = hidden_layers[i][j].d_sum;
-                for (unsigned k=0; k < hidden_layers[i][j].inputs.size(); ++k)
-                    hidden_layers[i][j].inputs[k].derivative = d_previous * (*input_vector)[k];
-                hidden_layers[i][j].d_bias = d_previous;
-            }
-            else
-            {
-                double d_previous = 0.0;
-                for (unsigned k=0; k < hidden_layers[i+1].size(); ++k)
-                {
-                    d_previous += hidden_layers[i+1][k].d_sum *
-                        hidden_layers[i+1][k].inputs[j].weight;
-                }
-                d_previous *= d_activation(hidden_layers[i][j].pre_activation_output);
-                hidden_layers[i][j].d_sum = d_previous;
-                for (unsigned k=0; k < hidden_layers[i][j].inputs.size(); ++k)
-                    hidden_layers[i][j].inputs[k].derivative = d_previous * (*input_vector)[k];
-                hidden_layers[i][j].d_bias = d_previous;             
-            }
-        }
-        if(i != 0)
-            delete input_vector;
+        (*hidden_layers.rbegin())->forward(*output_layer);
     }
+    else
+    {
+        output_layer->set_input(&inputs[0]);
+    }
+    
+    output_layer->forward(result);
+    return result.at(0,0);
 }
 
-void Network::update_weights(double rate)
+void Network::backpropagate(double y, double ey, double learning_rate)
 {
-    for (Link &l: output_neuron.inputs)
-        l.weight -= rate * l.derivative;
-    output_neuron.bias -= rate * output_neuron.d_bias;
-    
-    for (auto &layer: hidden_layers)
-        for (Neuron &neuron: layer)
-        {
-            for (Link &l: neuron.inputs)
-                l.weight -= rate * l.derivative;
-            neuron.bias -= rate * neuron.d_bias;
-        }
+    double d_loss = ey - y;
+    double nd_loss = -d_loss;
+
+    output_layer->set_d_output(&nd_loss);
+
+    if (hidden_layers.empty())
+    {
+        output_layer->backward(*d_input, learning_rate);
+        return;
+    }
+
+    output_layer->backward(**hidden_layers.rbegin(), learning_rate);
+
+    for (auto it = hidden_layers.rbegin(); it+1 != hidden_layers.rend(); it++)
+    {
+        (*it)->backward(**(it+1), learning_rate);
+    }
+
+    (*hidden_layers.begin())->backward(*d_input, learning_rate);
 }
 
 void Network::train(const std::vector<std::vector<double> > &features,
@@ -166,9 +149,31 @@ void Network::train(const std::vector<std::vector<double> > &features,
     {
         int s = rand() % labels.size();
         double ey = evaluate(features[s]);
-        backpropagate(labels[s], ey, features[s]);
-        update_weights(learning_rate);
+        backpropagate(labels[s], ey, learning_rate);
     }
+}
+
+bool Network::save(const char *path)
+{
+    ofstream file(path);
+    
+    // The size of the input vector
+    if (hidden_layers.size() > 0)
+        file << hidden_layers[0]->get_n_inputs() << " ";
+    else
+        file << output_layer->get_n_inputs() << " ";
+    
+    // The sizes of the hidden layers
+    for (auto &layer: hidden_layers)
+        file << layer->get_n_outputs() << " ";
+    file << endl;
+
+    // Weights
+    output_layer->save(file);
+    for (auto &layer: hidden_layers)
+        layer->save(file);
+
+    return true;
 }
 
 double Network::mae(const vector<vector<double> > &features, const vector<double> &labels)
@@ -192,86 +197,8 @@ double Network::mse(const vector<vector<double> > &features, const vector<double
     return sum / labels.size();
 }
 
-bool Network::save(const char *path)
+void Network::randomize(double *data, unsigned count, double min, double max)
 {
-    ofstream file(path);
-    
-    // The size of the input vector
-    if(hidden_layers.size() > 0)
-        file << hidden_layers[0][0].inputs.size() << " ";
-    else
-        file << output_neuron.inputs.size() << " ";
-    
-    // The sizes of hidden layers    
-    for (auto &layer: hidden_layers)
-        file << layer.size() << " ";
-    file << endl;
-    
-    // Weights
-    for (Link &link: output_neuron.inputs)
-        file << link.weight << " ";
-    file << output_neuron.bias << endl;
-    for (auto &layer: hidden_layers)
-    {
-        for (Neuron &neuron: layer)
-        {
-            for (Link &link: neuron.inputs)
-                file << link.weight << " ";
-            file << neuron.bias << "\n";
-        }
-    }
-    
-    file.close();
-    return true;
+    for (unsigned i = 0; i < count; ++i)
+        data[i] = min + (((double) rand()) / RAND_MAX) * (max - min);
 }
-
-void Network::init(const vector<unsigned> &shape)
-{
-    //activation = logistic;
-    //d_activation = d_logistic;
-    activation = rectify;
-    d_activation = d_rectify;
-    
-    input_size = shape[0];
-    for (unsigned i = 1; i < shape.size(); ++i)
-    {
-        vector<Neuron> layer;
-        layer.reserve(shape[i]);
-        for (unsigned j = 0; j < shape[i]; ++j)
-        {
-            vector<Link> full_conn;
-            full_conn.reserve(shape[i-1]);
-            for (unsigned k = 0; k < shape[i-1]; ++k)
-                full_conn.push_back(Link(k));
-            layer.push_back(Neuron(full_conn));
-        }
-        hidden_layers.push_back(layer); //TODO copy
-    }
-    unsigned last_hidden_size = shape[shape.size()-1];
-    vector<Link> full_conn;
-    
-    full_conn.reserve(last_hidden_size);
-    for (unsigned j = 0; j < last_hidden_size; ++j)
-    	full_conn.push_back(Link(j));
-   	output_neuron = Neuron(full_conn); //TODO the previous Neuron object is wasted    
-}
-
-bool Network::load_weights(ifstream &file)
-{   
-    for (Link &link: output_neuron.inputs)
-        file >> link.weight;
-    file >> output_neuron.bias;
-    for (auto &layer: hidden_layers)
-    {
-        for (Neuron &neuron: layer)
-        {
-            for (Link &link: neuron.inputs)
-                file >> link.weight;
-            file >> neuron.bias;
-        }
-    }
-    
-    file.close();
-    return true;
-}
-

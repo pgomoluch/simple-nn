@@ -1,13 +1,13 @@
-#ifndef NETWORK_H
-#define NETWORK_H
+#ifndef NETWORK2_H
+#define NETWORK2_H
 
-#include "neuron.h"
+#include "matrix.h"
+#include "layer.h"
 
 #include <fstream>
+#include <memory>
+#include <vector>
 
-double logistic(const double x);
-
-//TODO this is specifically a regressor network, which should be reflected in the name
 class Network
 {
 public:
@@ -16,22 +16,16 @@ public:
     double evaluate(const std::vector<double> &inputs);
     void train(const std::vector<std::vector<double> > &features,
         const std::vector<double> &labels, unsigned iter, double learning_rate);
+    void backpropagate(double y, double ey, double learning_rate);
+    bool save(const char *path);
     double mae(const std::vector<std::vector<double> > &features, const std::vector<double> &labels);
     double mse(const std::vector<std::vector<double> > &features, const std::vector<double> &labels);
-    
-    bool save(const char *path);
-    
-    void backpropagate(double y, double ey, std::vector<double> inputs); // requiring the input again is inconsistent
-    void update_weights(double rate);
 private:
-    Neuron output_neuron;
-    std::vector<std::vector<Neuron> > hidden_layers;
-    unsigned input_size;
-    double (*activation)(const double x);
-    double (*d_activation)(const double x);
-    
-    void init(const std::vector<unsigned> &shape);
-    bool load_weights(std::ifstream &file);
+    std::vector<std::shared_ptr<Layer>> hidden_layers;
+    std::shared_ptr<Layer> output_layer;
+    std::shared_ptr<Matrix> d_input;
+
+    static void randomize(double *data, unsigned count, double min, double max);
 };
 
 #endif
