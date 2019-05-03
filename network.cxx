@@ -7,14 +7,14 @@
 
 using namespace std;
 
-Network::Network(const std::vector<unsigned> &shape)
+Network::Network(const std::vector<unsigned> &shape, bool new_format)
 {
     double *init_weights;
     double *init_biases;
     
     // hidden layers
     if (shape.size() > 1)
-        for (auto it = shape.begin(); it+1 != shape.end(); ++it)
+        for (auto it = shape.begin(); it + 1 + new_format != shape.end(); ++it)
         {
             unsigned n_weights = (*it) * (*(it+1));
             init_weights = new double[n_weights];
@@ -28,19 +28,21 @@ Network::Network(const std::vector<unsigned> &shape)
         }
 
     // output layer
-    init_weights = new double[*shape.rbegin()];
-    randomize(init_weights, *shape.rbegin(), -0.5, 0.5);
-    init_biases = new double;
-    randomize(init_biases, 1, -0.5, 0.5);
-    output_layer = make_shared<Layer>(*shape.rbegin(), 1, init_weights, init_biases,
+    unsigned n_inputs = new_format? *(shape.rbegin()+1) : *shape.rbegin();
+    unsigned n_outputs = new_format? *shape.rbegin() : 1;
+    init_weights = new double[n_outputs * n_inputs];
+    randomize(init_weights, n_outputs * n_inputs, -0.5, 0.5);
+    init_biases = new double[n_outputs];
+    randomize(init_biases, n_outputs, -0.5, 0.5);
+    output_layer = make_shared<Layer>(n_inputs, n_outputs, init_weights, init_biases,
         nullptr, nullptr);
     delete[] init_weights;
-    delete init_biases;
+    delete[] init_biases;
 
     d_input = make_shared<Matrix>(*shape.begin(), 1);
 }
 
-Network::Network(const char *path)
+Network::Network(const char *path, bool new_format)
 {
     ifstream file(path);
     
@@ -52,6 +54,17 @@ Network::Network(const char *path)
     while(line_stream >> u)
         shape.push_back(u);
     
+    if (new_format)
+        read_new(shape, file);
+    else
+        read_old(shape, file);
+
+    file.close();
+}
+
+void Network::read_old(const vector<unsigned> &shape, ifstream &file)
+{
+    string line;
     getline(file, line);
     stringstream output_weights_stream(line);
     vector<double> weights;
@@ -91,8 +104,32 @@ Network::Network(const char *path)
         delete[] tmp_biases;
     }
 
-    file.close();
     d_input = make_shared<Matrix>(*shape.begin(), 1);
+}
+
+void Network::read_new(const vector<unsigned> &shape, ifstream &file)
+{
+    for (auto it = shape.begin(); it + 1 != shape.end(); it++)
+    {
+        auto nit = next(it);
+
+        double *tmp_weights = new double[*it * *nit];
+        double *tmp_biases = new double[*nit];
+        
+        for (unsigned i = 0; i < *it * *nit; ++i)
+            file >> tmp_weights[i];
+        for (unsigned i = 0; i < *nit; ++i)
+            file >> tmp_biases[i];
+
+        if (it + 2 == shape.end())
+            output_layer = output_layer = make_shared<Layer>(*it, *nit, tmp_weights, tmp_biases);
+        else
+            hidden_layers.push_back(make_shared<Layer>(*it, *nit, tmp_weights, tmp_biases,
+                Layer::relu, Layer::d_relu));
+
+        delete[] tmp_weights;
+        delete[] tmp_biases;
+    }
 }
 
 double Network::evaluate(const vector<double> &inputs)
@@ -153,7 +190,7 @@ void Network::train(const std::vector<std::vector<double> > &features,
     }
 }
 
-bool Network::save(const char *path)
+bool Network::save(const char *path, bool new_format)
 {
     ofstream file(path);
     
@@ -166,12 +203,22 @@ bool Network::save(const char *path)
     // The sizes of the hidden layers
     for (auto &layer: hidden_layers)
         file << layer->get_n_outputs() << " ";
+    
+    // The number of outputs
+    if (new_format)
+        file << output_layer->get_n_outputs();
+
     file << endl;
 
     // Weights
-    output_layer->save(file);
+    if (!new_format)
+        output_layer->save(file, new_format);
+    
     for (auto &layer: hidden_layers)
-        layer->save(file);
+        layer->save(file, new_format);
+    
+    if(new_format)
+        output_layer->save(file, new_format);
 
     return true;
 }

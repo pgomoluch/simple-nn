@@ -40,6 +40,7 @@ void matrix_test()
 }
 
 // Assumes there's a network file 'network.txt', defining a network with two inputs.
+// Will create a network file 'network2.txt' in the new file format.
 void forward_pass_test()
 {
     cout << "Forward pass comparison" << endl;
@@ -50,6 +51,8 @@ void forward_pass_test()
     const vector<double> sample = {1.0, 2.0};
     cout << "Old: " << n1.evaluate(sample) << "\n";
     cout << "New: " << n2.evaluate(sample) << "\n";
+
+    cout << endl;
 }
 
 // Assumes there's a network file 'network.txt', defining a network with two inputs.
@@ -96,10 +99,29 @@ void train_test()
 // Will create 'network_constructor_test.txt'
 void network_constructor_test()
 {
-    cout << "Network constructor test";
+    cout << "Network constructor test\n";
     vector<unsigned> shape({3,4,2});
-    legacy::Network nn2(shape);
-    nn2.save("network_constructor_test.txt");
+    Network nn2(shape, true);
+    nn2.save("network_constructor_test.txt", true);
+    cout << endl;
+}
+
+
+// Assumes there's a network file 'network.txt', defining a network with two inputs.
+// Will create a network file 'network-new.txt' in the new file format.
+void new_format_test()
+{
+    cout << "New file format test" << endl;
+    Network nn("network.txt");
+    nn.save("network2.txt", true);
+
+    Network nn2("network2.txt", true);
+
+    const vector<double> sample({1.0, 2.0});
+    
+    cout << "Original: " << nn.evaluate(sample) << endl;
+    cout << "Reloaded: " << nn2.evaluate(sample) << endl;
+    cout << endl;
 }
 
 int main()
@@ -108,6 +130,7 @@ int main()
     forward_pass_test();
     train_test();
     network_constructor_test();
+    new_format_test();
     
     return 0;
 }

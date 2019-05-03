@@ -41,7 +41,7 @@ public:
 
     int get_n_outputs() { return n_output; }
     int get_n_inputs() { return n_input; }
-    void save(std::ostream &file);
+    void save(std::ostream &file, bool new_format = false);
     static double relu(const double x) { if (x < 0.0) return 0.0; return x; }
     static double d_relu(const double x) { if (x < 0.0) return 0.0; return 1.0; }
 };

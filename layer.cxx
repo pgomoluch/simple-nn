@@ -57,12 +57,24 @@ void Layer::set_d_output(const double *source)
     d_outputs.assign(source);
 }
 
-void Layer::save(ostream &file)
+void Layer::save(ostream &file, bool new_format)
 {
-    for (unsigned i = 0; i < n_output; ++i)
+    if(new_format)
     {
-        for (unsigned j = 0; j < n_input; ++j)
-            file << weights.at(i,j) << " ";
-        file << biases.at(i, 0) << endl;
+        for (unsigned i = 0; i < n_output; ++i)
+        {
+            for (unsigned j = 0; j < n_input; ++j)
+                file << weights.at(i,j) << " ";
+            file << endl;
+        }
+        for (unsigned i = 0; i < n_output; ++i)
+            file << biases.at(i, 0) << "\n";
     }
+    else
+        for (unsigned i = 0; i < n_output; ++i)
+        {
+            for (unsigned j = 0; j < n_input; ++j)
+                file << weights.at(i,j) << " ";
+            file << biases.at(i, 0) << endl;
+        }
 }
