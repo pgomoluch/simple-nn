@@ -14,6 +14,7 @@ public:
     Network(const std::vector<unsigned> &shape, bool new_format = false);
     Network(const char *path, bool new_format = false);
     double evaluate(const std::vector<double> &inputs);
+    void evaluate(const std::vector<double> &inputs, Matrix &result);
     void train(const std::vector<std::vector<double> > &features,
         const std::vector<double> &labels, unsigned iter, double learning_rate);
     void backpropagate(double y, double ey, double learning_rate);

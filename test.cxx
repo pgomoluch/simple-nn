@@ -108,7 +108,7 @@ void network_constructor_test()
 
 
 // Assumes there's a network file 'network.txt', defining a network with two inputs.
-// Will create a network file 'network-new.txt' in the new file format.
+// Will create a network file 'network2.txt' in the new file format.
 void new_format_test()
 {
     cout << "New file format test" << endl;
@@ -124,6 +124,20 @@ void new_format_test()
     cout << endl;
 }
 
+// Assumes there's a network file 'network.txt', defining a network with two inputs
+// and two outputs.
+void multiple_outputs_test()
+{
+    cout << "Multiple outputs test" << endl;
+    Network nn("network22.txt", true);
+
+    Matrix result(2,1);
+    const vector<double> sample({1.0, 2.0});
+    nn.evaluate(sample, result);
+
+    cout << "Result:\n" << result << endl;
+}
+
 int main()
 {
     matrix_test();
@@ -131,6 +145,7 @@ int main()
     train_test();
     network_constructor_test();
     new_format_test();
+    multiple_outputs_test();
     
     return 0;
 }

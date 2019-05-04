@@ -1,5 +1,6 @@
 #include "network.h"
 
+#include <cassert>
 #include <cmath>
 #include <cstring>
 #include <iostream>
@@ -134,9 +135,16 @@ void Network::read_new(const vector<unsigned> &shape, ifstream &file)
 
 double Network::evaluate(const vector<double> &inputs)
 {
-    static double buf[10];
-    static Matrix result(1, 1, buf);
+    assert(output_layer->get_n_outputs() == 1);
+    
+    static Matrix result(1, 1);
 
+    evaluate(inputs, result);
+    return result.at(0,0);
+}
+
+void Network::evaluate(const std::vector<double> &inputs, Matrix &result)
+{
     if (!hidden_layers.empty())
     {
         (*hidden_layers.begin())->set_input(&inputs[0]);
@@ -144,16 +152,15 @@ double Network::evaluate(const vector<double> &inputs)
         {
             (*it)->forward(**(it+1));
         }
-        
+
         (*hidden_layers.rbegin())->forward(*output_layer);
     }
     else
     {
         output_layer->set_input(&inputs[0]);
     }
-    
+
     output_layer->forward(result);
-    return result.at(0,0);
 }
 
 void Network::backpropagate(double y, double ey, double learning_rate)
