@@ -4,7 +4,7 @@ FLAGS = -std=c++11
 
 nn: $(OBJS)
 	$(CC) $(FLAGS) -O3 -DNDEBUG $(OBJS) -o nn
-	ar rcs nn.a network.o utils.o
+	ar rcs nn.a config.o network.o layer.o matrix.o utils.o
 
 %.o: %.cxx
 	$(CC) $(FLAGS) -O3 -DNDEBUG -c $< -o $@
