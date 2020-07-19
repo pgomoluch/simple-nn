@@ -15,7 +15,7 @@ bool read_data(const char *feature_path, const char *label_path, std::vector<std
     getline(feature_file, first_line);
     feature_file.seekg(0);
     stringstream first_line_stream(first_line);
-    int n_features = 0;
+    unsigned n_features = 0;
     double d;
     while(first_line_stream >> d)
         ++n_features;

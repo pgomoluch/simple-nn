@@ -64,8 +64,8 @@ void Matrix::T(Matrix &result) const
         return;
     }
 
-    for (int i = 0; i < n_rows; ++i)
-        for (int j = 0; j < n_columns; ++j)
+    for (unsigned i = 0; i < n_rows; ++i)
+        for (unsigned j = 0; j < n_columns; ++j)
             result.data[j*n_rows + i] = data[i*n_columns + j];
 }
 
@@ -81,6 +81,8 @@ Matrix &Matrix::operator=(const Matrix &other)
         data = new double[n_rows * n_columns];
         assign(other.data);
     }
+
+    return *this;
 }
 
 void Matrix::multiply(const Matrix &left, const Matrix &right, Matrix &result)

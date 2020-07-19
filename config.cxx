@@ -83,6 +83,8 @@ bool Config::parse_key_value(const string &line)
         }
         hidden_layers = layers;
     }
+
+    return true;
 }
 
 

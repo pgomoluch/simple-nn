@@ -9,7 +9,7 @@
 class Layer {
 private:
     typedef double (*nonlinearity)(double);
-    int n_input, n_output;
+    unsigned n_input, n_output;
     Matrix weights, biases, inputs;
     Matrix d_outputs, d_wx, pre_activation_outputs, d_input_T, update, update_T;
     double (*f)(double);

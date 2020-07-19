@@ -84,7 +84,7 @@ void learn(const vector<vector<double> > &features, const vector<double> &labels
     
     steady_clock::time_point t1 = steady_clock::now();
     
-    for (int i = 0; i < config.iterations; ++i)
+    for (unsigned i = 0; i < config.iterations; ++i)
     {
         //network.train(features, labels, 100000, 0.0000000001);
         network.train(features, labels, 100000, config.learning_rate);
