@@ -23,7 +23,7 @@ Network::Network(const std::vector<unsigned> &shape, bool new_format)
             init_biases = new double[*(it+1)];
             randomize(init_biases, *(it+1), -0.5, 0.5);
             hidden_layers.push_back(make_shared<Layer>(*it, *(it+1), init_weights, init_biases,
-                Layer::relu, Layer::d_relu));
+                Layer::logistic, Layer::d_logistic));
             delete[] init_weights;
             delete[] init_biases;
         }

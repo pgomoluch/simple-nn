@@ -3,6 +3,7 @@
 
 #include "matrix.h"
 
+#include <cmath>
 #include <fstream>
 
 class Layer {
@@ -44,6 +45,8 @@ public:
     void save(std::ostream &file, bool new_format = false);
     static double relu(const double x) { if (x < 0.0) return 0.0; return x; }
     static double d_relu(const double x) { if (x < 0.0) return 0.0; return 1.0; }
+    static double logistic(const double x) { return 1.0 / ( 1.0 + exp(-x) ); }
+    static double d_logistic(const double x) { return logistic(x) * (1 - logistic(x)); }
 };
 
 #endif

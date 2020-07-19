@@ -138,6 +138,12 @@ void multiple_outputs_test()
     cout << "Result:\n" << result << endl;
 }
 
+void handler_test()
+{
+    Network nn("nptest.txt", true);
+    nn.save("nptest2.txt", true);
+}
+
 int main()
 {
     matrix_test();
@@ -146,6 +152,7 @@ int main()
     network_constructor_test();
     new_format_test();
     multiple_outputs_test();
+    handler_test();
     
     return 0;
 }
